@@ -1,0 +1,5 @@
+{
+  "name": "Nourish Snap - Registro de Comidas IA",
+  "description": "Una aplicación inteligente para registrar comidas. Simplemente sube una foto de tu comida, y nuestra IA, impulsada por Gemini, identificará el alimento, estimará el tamaño de la porción y listará los ingredientes. Luego puedes guardar esta información en tu registro personal de comidas en Google Sheets.",
+  "requestFramePermissions": []
+}
