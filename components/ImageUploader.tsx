@@ -25,10 +25,12 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ imageFile, onImageChange,
     <div className="w-full">
       <input
         type="file"
+        id="file-upload"
         ref={fileInputRef}
         onChange={handleFileChange}
         className="hidden"
         accept="image/png, image/jpeg, image/webp"
+        aria-label="Upload meal image"
       />
       {imageUrl ? (
         <div className="mt-4 group relative">
