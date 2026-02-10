@@ -117,7 +117,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, googleSheetUrl }) => {
                         <img src="./logo.png" alt="Nutria Logo" className="w-16 h-16 rounded-full shadow-sm" />
                     </div>
                     <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 italic">
-                        Nutria <span className="text-brand">Nutrición IA</span>
+                        Nutria <span className="text-brand">Nutrición Inteligente</span>
                     </h2>
                     <p className="text-slate-500 dark:text-slate-400 mt-2">
                         {isRegistering
