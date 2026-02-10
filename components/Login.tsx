@@ -114,7 +114,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, googleSheetUrl }) => {
             <div className={`w-full ${regStep === 2 ? 'max-w-3xl' : 'max-w-md'} bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-8 border border-slate-100 dark:border-slate-700 transition-all duration-500 overflow-hidden`}>
                 <div className="text-center mb-8">
                     <div className="inline-flex items-center justify-center w-20 h-20 bg-brand/5 rounded-full mb-4">
-                        <img src="/Nutria/logo.png" alt="Nutria Logo" className="w-16 h-16 rounded-full shadow-sm" />
+                        <img src="./logo.png" alt="Nutria Logo" className="w-16 h-16 rounded-full shadow-sm" />
                     </div>
                     <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 italic">
                         Nutria <span className="text-brand">Nutrición IA</span>
@@ -136,23 +136,29 @@ const Login: React.FC<LoginProps> = ({ onLogin, googleSheetUrl }) => {
                     {(!isRegistering || regStep === 1) ? (
                         <div className="space-y-4 animate-in fade-in duration-500">
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Nombre de usuario</label>
+                                <label htmlFor="username" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Nombre de usuario</label>
                                 <input
                                     type="text" required
+                                    id="username"
+                                    name="username"
                                     className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-brand"
                                     placeholder="p.ej. juan_cr"
                                     value={username}
                                     onChange={(e) => setUsername(e.target.value)}
+                                    autoComplete="username"
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Contraseña</label>
+                                <label htmlFor="password" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Contraseña</label>
                                 <input
                                     type="password" required
+                                    id="password"
+                                    name="password"
                                     className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-brand"
                                     placeholder="••••••••"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
+                                    autoComplete="current-password"
                                 />
                             </div>
                         </div>
