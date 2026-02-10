@@ -33,20 +33,20 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ imageFile, onImageChange,
       {imageUrl ? (
         <div className="mt-4 group relative">
           <img src={imageUrl} alt="Meal preview" className="w-full h-auto max-h-96 object-contain rounded-lg shadow-md" />
-           <div 
-             onClick={handleUploadClick}
-             className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 flex items-center justify-center transition-all duration-300 rounded-lg cursor-pointer"
-           >
-              <span className="text-white opacity-0 group-hover:opacity-100 font-semibold text-lg flex items-center">
-                <CameraIcon className="w-6 h-6 mr-2"/>
-                Cambiar Foto
-              </span>
-           </div>
+          <div
+            onClick={handleUploadClick}
+            className="absolute inset-0 bg-black/0 group-hover:bg-black/50 flex items-center justify-center transition-all duration-300 rounded-lg cursor-pointer"
+          >
+            <span className="text-white opacity-0 group-hover:opacity-100 font-semibold text-lg flex items-center">
+              <CameraIcon className="w-6 h-6 mr-2" />
+              Cambiar Foto
+            </span>
+          </div>
         </div>
       ) : (
-        <div 
-            onClick={handleUploadClick}
-            className="mt-4 flex justify-center items-center w-full h-64 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg cursor-pointer hover:border-brand dark:hover:border-brand-light transition-colors"
+        <div
+          onClick={handleUploadClick}
+          className="mt-4 flex justify-center items-center w-full h-64 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg cursor-pointer hover:border-brand dark:hover:border-brand-light transition-colors"
         >
           <div className="text-center">
             <CameraIcon className="mx-auto h-12 w-12 text-slate-400" />

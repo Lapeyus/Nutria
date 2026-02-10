@@ -1,13 +1,14 @@
+/// <reference types="vite/client" />
 import { GoogleGenAI, Type } from "@google/genai";
 import { FoodAnalysis } from '../types';
 
-const API_KEY = process.env.API_KEY;
+const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 
-if (!API_KEY) {
-  throw new Error("API_KEY environment variable is not set");
+if (!API_KEY || API_KEY === "ENTER_YOUR_API_KEY_HERE") {
+  throw new Error("API Key is not set. Please add VITE_GEMINI_API_KEY to your .env.local file.");
 }
 
-const ai = new GoogleGenAI({ apiKey: API_KEY });
+export const ai = new GoogleGenAI({ apiKey: API_KEY });
 
 const fileToGenerativePart = async (file: File) => {
   const base64EncodedDataPromise = new Promise<string>((resolve) => {
@@ -89,17 +90,17 @@ export const analyzeFoodImage = async (imageFile: File): Promise<FoodAnalysis> =
 
     const jsonText = response.text.trim();
     if (!jsonText) {
-        throw new Error("Análisis fallido: La IA no pudo identificar ninguna comida en la imagen. Por favor, intenta con una foto más clara o un ángulo diferente.");
+      throw new Error("Análisis fallido: La IA no pudo identificar ninguna comida en la imagen. Por favor, intenta con una foto más clara o un ángulo diferente.");
     }
 
     let parsedJson;
     try {
-        parsedJson = JSON.parse(jsonText);
+      parsedJson = JSON.parse(jsonText);
     } catch (parseError) {
-        console.error("Failed to parse JSON response from Gemini:", jsonText);
-        throw new Error("Análisis fallido: La IA devolvió una respuesta en un formato inesperado. Por favor, inténtalo de nuevo.");
+      console.error("Failed to parse JSON response from Gemini:", jsonText);
+      throw new Error("Análisis fallido: La IA devolvió una respuesta en un formato inesperado. Por favor, inténtalo de nuevo.");
     }
-    
+
     // Basic validation to ensure the parsed object matches our type
     if (
       !parsedJson.foodName ||
@@ -111,24 +112,24 @@ export const analyzeFoodImage = async (imageFile: File): Promise<FoodAnalysis> =
       console.error("Gemini response was missing required fields:", parsedJson);
       throw new Error("Análisis fallido: La respuesta de la IA estaba incompleta. Por favor, inténtalo de nuevo.");
     }
-    
+
     return parsedJson as FoodAnalysis;
 
   } catch (error: any) {
     console.error("Error during food analysis:", error);
     // If we threw one of our custom messages, just re-throw it.
     if (error.message.startsWith('Análisis fallido:')) {
-        throw error;
+      throw error;
     }
-    
+
     if (error.message.includes('429')) {
-         throw new Error("¡Estás analizando demasiado rápido! Por favor, espera un momento antes de volver a intentarlo.");
+      throw new Error("¡Estás analizando demasiado rápido! Por favor, espera un momento antes de volver a intentarlo.");
     }
     if (error.message.includes('400')) { // Bad Request, often from malformed input
-        throw new Error("Análisis fallido: La imagen enviada podría ser inválida o no compatible. Por favor, intenta con una imagen diferente.");
+      throw new Error("Análisis fallido: La imagen enviada podría ser inválida o no compatible. Por favor, intenta con una imagen diferente.");
     }
     if (error.message.match(/50\d/)) { // Catches 500, 503, etc. for server errors
-        throw new Error("El servicio de análisis no está disponible temporalmente. Por favor, inténtalo de nuevo más tarde.");
+      throw new Error("El servicio de análisis no está disponible temporalmente. Por favor, inténtalo de nuevo más tarde.");
     }
 
     // Default error for other cases

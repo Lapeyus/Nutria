@@ -1,33 +1,32 @@
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import ImageUploader from './components/ImageUploader';
 import AnalysisResult from './components/AnalysisResult';
+import Login from './components/Login';
+import ProfileView from './components/ProfileView';
+import ComplianceDashboard from './components/ComplianceDashboard';
 import { analyzeFoodImage } from './services/geminiService';
-import { FoodAnalysis } from './types';
+import { FoodAnalysis, User, UserProfile, FoodSummary } from './types';
 import { SparklesIcon, ArrowPathIcon } from './components/icons/Icons';
 
 // The URL for your Google Apps Script Web App
-const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbwWx11S21zPmZ8Ab-RBLSUWmj83nHF4RT7p6NJgk9ToL6_yFtFQGwTGqawgy4FYsKA30A/exec";
+const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbyBGooD6ahbcZ12oizfHswzH3joqiHt8zNxc2EI_4e_rPoiMv-TR2k212l9b8tVPK0FQQ/exec";
 
 // Set a max file size (e.g., 4MB) to prevent issues with base64 encoding and API requests.
 const MAX_FILE_SIZE_BYTES = 4 * 1024 * 1024;
 
-// Helper to resize image for Google Sheets (limit ~50k chars per cell)
 const resizeImageForSheet = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const img = new Image();
     const url = URL.createObjectURL(file);
-    
     img.onload = () => {
       URL.revokeObjectURL(url);
       const canvas = document.createElement('canvas');
-      // 300px is usually safe for the 50k char limit with low jpeg quality
-      const MAX_DIMENSION = 300; 
+      const MAX_DIMENSION = 300;
       let width = img.width;
       let height = img.height;
-
       if (width > height) {
         if (width > MAX_DIMENSION) {
           height *= MAX_DIMENSION / width;
@@ -39,212 +38,207 @@ const resizeImageForSheet = (file: File): Promise<string> => {
           height = MAX_DIMENSION;
         }
       }
-
       canvas.width = width;
       canvas.height = height;
       const ctx = canvas.getContext('2d');
-      if (!ctx) {
-        reject(new Error("Canvas context not available"));
-        return;
-      }
+      if (!ctx) { reject(new Error("Canvas context not available")); return; }
       ctx.drawImage(img, 0, 0, width, height);
-      // JPEG quality 0.5 to keep size low
       resolve(canvas.toDataURL('image/jpeg', 0.5));
     };
-    
-    img.onerror = () => {
-      URL.revokeObjectURL(url);
-      reject(new Error("Failed to load image for resizing"));
-    };
-    
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Failed to load image for resizing")); };
     img.src = url;
   });
 };
 
 function App() {
+  const [currentUser, setCurrentUser] = useState<User | null>(() => {
+    const savedUser = localStorage.getItem('nutria_user');
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
+
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [analysis, setAnalysis] = useState<FoodAnalysis | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-
-  // State for saving to Google Sheet
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+
+  const [dailySummary, setDailySummary] = useState<FoodSummary>({
+    harinas: 0, vegetales: 0, proteinas: 0, frutas: 0, leches: 0, grasas: 0, calorias: 0
+  });
+
+  const fetchDailySummary = useCallback(async (username: string) => {
+    try {
+      const response = await fetch(GOOGLE_SHEET_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'get_summary', username }),
+      });
+      const result = await response.json();
+      if (result.status === 'success') {
+        setDailySummary(result.summary);
+      }
+    } catch (err) {
+      console.error("Error fetching summary:", err);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (currentUser?.isLoggedIn) {
+      fetchDailySummary(currentUser.username);
+    }
+  }, [currentUser, fetchDailySummary]);
+
+  const handleLogin = (user: User) => {
+    setCurrentUser(user);
+    localStorage.setItem('nutria_user', JSON.stringify(user));
+  };
+
+  const handleLogout = () => {
+    setCurrentUser(null);
+    localStorage.removeItem('nutria_user');
+    setIsProfileOpen(false);
+    handleReset();
+  };
+
+  const handleUpdateProfile = (profile: UserProfile) => {
+    if (currentUser) {
+      const updatedUser = { ...currentUser, profile };
+      setCurrentUser(updatedUser);
+      localStorage.setItem('nutria_user', JSON.stringify(updatedUser));
+    }
+  };
 
   const handleImageChange = (file: File | null) => {
-    // Clear previous states when a new image is selected or cleared
     setAnalysis(null);
     setError(null);
     setSaveSuccess(false);
     setSaveError(null);
-
     if (file) {
-      if (file.size > MAX_FILE_SIZE_BYTES) {
-        setError(`La imagen es demasiado grande. Por favor, sube un archivo de menos de ${MAX_FILE_SIZE_BYTES / 1024 / 1024}MB.`);
-        setImageFile(null);
-        setImageUrl(null);
-        return;
-      }
       setImageFile(file);
-      setImageUrl(URL.createObjectURL(file));
+      const url = URL.createObjectURL(file);
+      setImageUrl(url);
     } else {
+      if (imageUrl) URL.revokeObjectURL(imageUrl);
       setImageFile(null);
       setImageUrl(null);
     }
   };
-  
-  const handleReset = () => {
-    setImageFile(null);
-    setImageUrl(null);
-    setAnalysis(null);
-    setIsLoading(false);
-    setError(null);
-    setIsSaving(false);
-    setSaveSuccess(false);
-    setSaveError(null);
-  };
 
-  const handleAnalyzeClick = useCallback(async () => {
-    if (!imageFile) {
-      setError("Por favor, sube una imagen primero.");
-      return;
-    }
-
+  const handleAnalyze = async () => {
+    if (!imageFile) return;
     setIsLoading(true);
     setError(null);
     setAnalysis(null);
-    setSaveSuccess(false);
-    setSaveError(null);
-
     try {
       const result = await analyzeFoodImage(imageFile);
       setAnalysis(result);
-    } catch (e: any) {
-      setError(e.message || "Ocurrió un error inesperado durante el análisis.");
+    } catch (err: any) {
+      setError(err.message || "Ocurrió un error al analizar la imagen.");
     } finally {
       setIsLoading(false);
     }
-  }, [imageFile]);
-  
-  const handleSaveToSheet = async () => {
-    if (!analysis) return;
+  };
 
-    setIsSaving(true);
+  const handleReset = () => {
+    handleImageChange(null);
+    setAnalysis(null);
+    setError(null);
     setSaveSuccess(false);
     setSaveError(null);
+  };
 
-    if (!navigator.onLine) {
-      setSaveError("Parece que no tienes conexión. Por favor, revisa tu conexión a internet e inténtalo de nuevo.");
-      setIsSaving(false);
-      return;
-    }
-
+  const handleSaveToSheet = async () => {
+    if (!analysis || !currentUser) return;
+    setIsSaving(true);
+    setSaveError(null);
     try {
-      // Resize and convert image to base64
-      let imageBase64 = null;
+      let imageBase64 = "";
       if (imageFile) {
-        try {
-          // We resize the image because Google Sheets cells have a strict character limit (50,000).
-          // Sending a full-size image would fail to save.
-          imageBase64 = await resizeImageForSheet(imageFile);
-        } catch (e) {
-          console.warn("Could not resize image for saving:", e);
-        }
+        try { imageBase64 = await resizeImageForSheet(imageFile); } catch (e) { console.warn(e); }
       }
-
-      // Preparamos el objeto de datos que coincide con la estructura que
-      // espera el Google Apps Script.
       const dataToSave = {
-        timestamp: analysis.photoTimestamp, // Enviar timestamp de EXIF si existe
+        action: 'save_meal',
+        username: currentUser?.username,
+        timestamp: analysis.photoTimestamp,
         foodName: analysis.foodName,
         portionSize: analysis.portionSize,
         estimatedCalories: analysis.estimatedCalories,
-        ingredients: analysis.ingredients, // El script de Google puede manejar el array directamente
-        ...analysis.foodGroups, // Desglosamos las porciones: harinas, vegetales, etc.
-        image: imageBase64, // Enviar la imagen redimensionada como base64
+        ingredients: analysis.ingredients,
+        ...analysis.foodGroups,
+        image: imageBase64,
       };
 
-      // El Google Apps Script proporcionado espera una carga útil JSON en el cuerpo de la solicitud (`e.postData.contents`).
-      await fetch(GOOGLE_SHEET_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        body: JSON.stringify(dataToSave),
-      });
+      // We use 'no-cors' only if the user environment requires it, 
+      // but 'get_summary' works with normal fetch, so we should try normal fetch first for POSTs if possible
+      // or handle the Apps Script peculiar behavior.
+      await fetch(GOOGLE_SHEET_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(dataToSave) });
 
-      // Debido a que la solicitud es 'no-cors', no podemos leer la respuesta para
-      // confirmar el éxito del lado del servidor. Procedemos de manera optimista.
       setSaveSuccess(true);
-
+      // Wait a bit then refresh summary
+      setTimeout(() => fetchDailySummary(currentUser.username), 1500);
     } catch (error: any) {
-      console.error("A network error occurred while saving to Google Sheet:", error);
-      setSaveError("No se pudo guardar en tu registro. Por favor, revisa tu conexión e inténtalo de nuevo.");
+      setSaveError("No se pudo guardar en tu registro.");
     } finally {
       setIsSaving(false);
     }
   };
 
-
   return (
-    <div className="bg-slate-50 dark:bg-slate-900 min-h-screen flex flex-col font-sans">
-      <Header />
-      <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="max-w-3xl mx-auto">
-          <div className="text-center">
-            <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-800 dark:text-slate-200 tracking-tight">
-              Analiza Tu Comida
-            </h1>
-            <p className="mt-3 max-w-2xl mx-auto text-lg text-slate-600 dark:text-slate-400">
-              Toma una foto de tu comida y deja que la IA te dé un desglose nutricional. ¡Así de simple!
-            </p>
+    <div className="bg-slate-50 dark:bg-slate-900 min-h-screen flex flex-col font-sans transition-colors duration-300">
+      <Header user={currentUser} onLogout={handleLogout} onOpenProfile={() => setIsProfileOpen(true)} />
+
+      <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+        {!currentUser?.isLoggedIn ? (
+          <div className="max-w-md mx-auto mt-12">
+            <Login onLogin={handleLogin} googleSheetUrl={GOOGLE_SHEET_URL} />
           </div>
-          
-          <div className="mt-8 p-6 bg-white dark:bg-slate-800 rounded-xl shadow-lg">
-            <ImageUploader 
-              imageFile={imageFile} 
-              onImageChange={handleImageChange} 
-              imageUrl={imageUrl} 
-            />
-            
-            <div className="mt-6 flex flex-col sm:flex-row gap-4">
-              <button
-                onClick={handleAnalyzeClick}
-                disabled={!imageFile || isLoading}
-                className="w-full sm:w-auto flex-1 inline-flex justify-center items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-brand hover:bg-brand-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-light disabled:bg-slate-400 disabled:cursor-not-allowed dark:disabled:bg-slate-600 transition-colors"
-              >
-                {isLoading ? (
-                  <>
-                    <ArrowPathIcon className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" />
-                    Analizando...
-                  </>
-                ) : (
-                  <>
-                    <SparklesIcon className="-ml-1 mr-2 h-5 w-5" />
-                    Analizar Comida
-                  </>
-                )}
-              </button>
-              { (imageFile || analysis || error) && (
-                 <button
-                    onClick={handleReset}
-                    className="w-full sm:w-auto inline-flex justify-center items-center px-6 py-3 border border-slate-300 dark:border-slate-600 text-base font-medium rounded-md text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-colors"
-                 >
-                   Empezar de Nuevo
-                 </button>
-              )}
+        ) : (
+          <div className="max-w-3xl mx-auto">
+            <div className="text-center mb-6 sm:mb-10">
+              <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight leading-tight">
+                Nutria <span className="text-brand">Nutrición IA</span>
+              </h1>
+              <p className="mt-3 sm:mt-4 max-w-2xl mx-auto text-base sm:text-lg text-slate-600 dark:text-slate-400">
+                Tu asistente personal de salud.
+              </p>
+            </div>
+
+            {currentUser.profile && (
+              <ComplianceDashboard profile={currentUser.profile} summary={dailySummary} />
+            )}
+
+            <div className="p-1 bg-gradient-to-br from-brand/20 via-transparent to-brand/10 rounded-2xl sm:rounded-3xl shadow-lg mb-6 sm:mb-8">
+              <div className="p-4 sm:p-6 bg-white dark:bg-slate-800 rounded-2xl sm:rounded-3xl">
+                <h3 className="text-xs sm:text-sm font-black text-slate-400 uppercase tracking-widest mb-3 sm:mb-4 flex items-center">
+                  <span className="w-6 sm:w-8 h-[2px] bg-brand/30 mr-2 sm:mr-3"></span>
+                  Nuevo Registro
+                </h3>
+                <ImageUploader imageFile={imageFile} onImageChange={handleImageChange} imageUrl={imageUrl} />
+                <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row gap-3 sm:gap-4">
+                  <button onClick={handleAnalyze} disabled={!imageFile || isLoading} className="flex-grow py-3 sm:py-4 bg-brand hover:bg-brand-dark text-white rounded-xl font-bold shadow-lg shadow-brand/20 transition-all flex items-center justify-center disabled:opacity-50 text-sm sm:text-base touch-manipulation active:scale-95 min-h-[44px]">
+                    {isLoading ? "Analizando..." : <><SparklesIcon className="w-5 h-5 mr-2" /> Analizar Plato</>}
+                  </button>
+                  {imageFile && (
+                    <button onClick={handleReset} className="px-4 sm:px-6 py-3 sm:py-4 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl font-bold hover:bg-slate-200 dark:hover:bg-slate-600 transition-all flex items-center justify-center text-sm sm:text-base touch-manipulation active:scale-95 min-h-[44px]">
+                      <ArrowPathIcon className="w-5 h-5 mr-2" /> Reiniciar
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
 
             {error && (
-              <div className="mt-6 p-4 bg-red-100 dark:bg-red-900/30 border border-red-400 dark:border-red-600 text-red-700 dark:text-red-300 rounded-lg">
-                <p><span className="font-bold">Error:</span> {error}</p>
+              <div className="mt-6 sm:mt-8 p-4 sm:p-6 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800 rounded-2xl animate-in zoom-in duration-300">
+                <p className="text-red-600 dark:text-red-400 font-medium text-center text-sm sm:text-base">{error}</p>
               </div>
             )}
-            
-            {analysis && !isLoading && (
-              <div className="mt-8">
-                <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-200 mb-4">Resultados del Análisis</h2>
-                <AnalysisResult 
+
+            {analysis && (
+              <div className="mt-6 sm:mt-8 animate-in slide-in-from-bottom-8 duration-700 pb-16 sm:pb-20">
+                <AnalysisResult
                   analysis={analysis}
                   onSave={handleSaveToSheet}
                   isSaving={isSaving}
@@ -253,10 +247,19 @@ function App() {
                 />
               </div>
             )}
-            
           </div>
-        </div>
+        )}
       </main>
+
+      {isProfileOpen && currentUser && (
+        <ProfileView
+          user={currentUser}
+          googleSheetUrl={GOOGLE_SHEET_URL}
+          onUpdate={handleUpdateProfile}
+          onClose={() => setIsProfileOpen(false)}
+        />
+      )}
+
       <Footer />
     </div>
   );

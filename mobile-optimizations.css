@@ -1,0 +1,113 @@
+/* Mobile Optimizations for Nutria App */
+
+/* Safe area support for notched devices */
+@supports (padding: max(0px)) {
+    body {
+        padding-left: env(safe-area-inset-left);
+        padding-right: env(safe-area-inset-right);
+    }
+}
+
+/* Touch-friendly utilities */
+.touch-manipulation {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Prevent text selection on buttons */
+button {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+}
+
+/* Smooth scrolling on mobile */
+@media (max-width: 640px) {
+    html {
+        scroll-behavior: smooth;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* Optimize font sizes for mobile */
+    body {
+        font-size: 14px;
+        line-height: 1.5;
+    }
+
+    /* Better tap targets - minimum 44x44px */
+    button,
+    a,
+    input[type="button"],
+    input[type="submit"] {
+        min-height: 44px;
+        min-width: 44px;
+    }
+
+    /* Reduce animations on mobile for better performance */
+    * {
+        animation-duration: 0.3s !important;
+        transition-duration: 0.2s !important;
+    }
+}
+
+/* Landscape mode optimizations for mobile */
+@media (max-width: 896px) and (orientation: landscape) {
+    .pb-safe {
+        padding-bottom: env(safe-area-inset-bottom, 1rem);
+    }
+}
+
+/* Prevent zoom on input focus (iOS) */
+@media (max-width: 640px) {
+
+    input[type="text"],
+    input[type="number"],
+    input[type="email"],
+    input[type="password"],
+    textarea,
+    select {
+        font-size: 16px !important;
+    }
+}
+
+/* Better image handling on mobile */
+img {
+    max-width: 100%;
+    height: auto;
+    -webkit-user-drag: none;
+}
+
+/* Optimize modals for mobile */
+@media (max-width: 640px) {
+
+    [role="dialog"],
+    .modal {
+        max-height: 90vh;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+}
+
+/* Hide scrollbar but keep functionality */
+.hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+
+/* Active state for better touch feedback */
+.active\:scale-95:active {
+    transform: scale(0.95);
+}
+
+/* Utility for safe area bottom padding */
+.pb-safe {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+.pt-safe {
+    padding-top: max(1rem, env(safe-area-inset-top));
+}
