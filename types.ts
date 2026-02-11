@@ -43,11 +43,34 @@ export interface FoodGroupPortions {
   grasas: number;
 }
 
+export interface FoodGroupExplanations {
+  harinas: string;
+  vegetales: string;
+  proteinas: string;
+  frutas: string;
+  leches: string;
+  grasas: string;
+}
+
+export interface EstimateExplanations {
+  portionSize: string;
+  estimatedCalories: string;
+  foodGroups: FoodGroupExplanations;
+}
+
 export interface FoodAnalysis {
   photoTimestamp?: string;
   foodName: string;
   portionSize: string;
   ingredients: string[];
   estimatedCalories: number;
+  foodGroups: FoodGroupPortions;
+  estimateExplanations: EstimateExplanations;
+}
+
+export interface AnalysisAdjustments {
+  foodName: string;
+  portionSize: string;
+  ingredients: string[];
   foodGroups: FoodGroupPortions;
 }

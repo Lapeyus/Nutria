@@ -5,9 +5,17 @@ interface ImageUploaderProps {
   imageFile: File | null;
   onImageChange: (file: File | null) => void;
   imageUrl: string | null;
+  mealDescription: string;
+  onMealDescriptionChange: (description: string) => void;
 }
 
-const ImageUploader: React.FC<ImageUploaderProps> = ({ imageFile, onImageChange, imageUrl }) => {
+const ImageUploader: React.FC<ImageUploaderProps> = ({
+  imageFile,
+  onImageChange,
+  imageUrl,
+  mealDescription,
+  onMealDescriptionChange,
+}) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
@@ -79,6 +87,22 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ imageFile, onImageChange,
           </button>
         </div>
       )}
+
+      <div className="mt-4">
+        <label htmlFor="meal-description" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+          Descripcion del plato (opcional)
+        </label>
+        <textarea
+          id="meal-description"
+          value={mealDescription}
+          onChange={(event) => onMealDescriptionChange(event.target.value)}
+          placeholder="Ej: Casado con pollo a la plancha, arroz integral, frijoles negros y ensalada sin aderezo."
+          rows={3}
+          maxLength={300}
+          className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/60"
+          aria-label="Descripcion opcional del plato"
+        />
+      </div>
     </div>
   );
 };

@@ -7,8 +7,8 @@ import AnalysisResult from './components/AnalysisResult';
 import Login from './components/Login';
 import ProfileView from './components/ProfileView';
 import ComplianceDashboard from './components/ComplianceDashboard';
-import { analyzeFoodImage } from './services/geminiService';
-import { FoodAnalysis, User, UserProfile, FoodSummary } from './types';
+import { analyzeFoodImage, reestimateFoodAnalysis } from './services/geminiService';
+import { AnalysisAdjustments, FoodAnalysis, User, UserProfile, FoodSummary } from './types';
 import { SparklesIcon, ArrowPathIcon } from './components/icons/Icons';
 
 // The URL for your Google Apps Script Web App
@@ -58,12 +58,15 @@ function App() {
 
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [mealDescription, setMealDescription] = useState<string>('');
   const [analysis, setAnalysis] = useState<FoodAnalysis | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [isReestimating, setIsReestimating] = useState<boolean>(false);
+  const [reestimateError, setReestimateError] = useState<string | null>(null);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   const [dailySummary, setDailySummary] = useState<FoodSummary>({
@@ -116,6 +119,7 @@ function App() {
     setError(null);
     setSaveSuccess(false);
     setSaveError(null);
+    setReestimateError(null);
     if (file) {
       setImageFile(file);
       const url = URL.createObjectURL(file);
@@ -131,9 +135,10 @@ function App() {
     if (!imageFile) return;
     setIsLoading(true);
     setError(null);
+    setReestimateError(null);
     setAnalysis(null);
     try {
-      const result = await analyzeFoodImage(imageFile);
+      const result = await analyzeFoodImage(imageFile, mealDescription);
       setAnalysis(result);
     } catch (err: any) {
       setError(err.message || "Ocurrió un error al analizar la imagen.");
@@ -144,10 +149,27 @@ function App() {
 
   const handleReset = () => {
     handleImageChange(null);
+    setMealDescription('');
     setAnalysis(null);
     setError(null);
     setSaveSuccess(false);
     setSaveError(null);
+    setReestimateError(null);
+  };
+
+  const handleReestimate = async (adjustments: AnalysisAdjustments) => {
+    if (!analysis || !imageFile) return;
+    setIsReestimating(true);
+    setReestimateError(null);
+    setSaveSuccess(false);
+    try {
+      const updatedAnalysis = await reestimateFoodAnalysis(imageFile, analysis, adjustments, mealDescription);
+      setAnalysis(updatedAnalysis);
+    } catch (err: any) {
+      setReestimateError(err.message || "No se pudo reestimar la comida con los cambios proporcionados.");
+    } finally {
+      setIsReestimating(false);
+    }
   };
 
   const handleSaveToSheet = async () => {
@@ -219,7 +241,13 @@ function App() {
                   <span className="w-6 sm:w-8 h-[2px] bg-brand/30 mr-2 sm:mr-3"></span>
                   Nuevo Registro
                 </h3>
-                <ImageUploader imageFile={imageFile} onImageChange={handleImageChange} imageUrl={imageUrl} />
+                <ImageUploader
+                  imageFile={imageFile}
+                  onImageChange={handleImageChange}
+                  imageUrl={imageUrl}
+                  mealDescription={mealDescription}
+                  onMealDescriptionChange={setMealDescription}
+                />
                 <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row gap-3 sm:gap-4">
                   <button onClick={handleAnalyze} disabled={!imageFile || isLoading} className="flex-grow py-3 sm:py-4 bg-brand hover:bg-brand-dark text-white rounded-xl font-bold shadow-lg shadow-brand/20 transition-all flex items-center justify-center disabled:opacity-50 text-sm sm:text-base touch-manipulation active:scale-95 min-h-[44px]">
                     {isLoading ? "Analizando..." : <><SparklesIcon className="w-5 h-5 mr-2" /> Analizar Plato</>}
@@ -243,6 +271,9 @@ function App() {
               <div className="mt-6 sm:mt-8 animate-in slide-in-from-bottom-8 duration-700 pb-16 sm:pb-20">
                 <AnalysisResult
                   analysis={analysis}
+                  onReestimate={handleReestimate}
+                  isReestimating={isReestimating}
+                  reestimateError={reestimateError}
                   onSave={handleSaveToSheet}
                   isSaving={isSaving}
                   saveSuccess={saveSuccess}
