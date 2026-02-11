@@ -177,8 +177,11 @@ function App() {
       await fetch(GOOGLE_SHEET_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(dataToSave) });
 
       setSaveSuccess(true);
-      // Wait a bit then refresh summary
-      setTimeout(() => fetchDailySummary(currentUser.username), 1500);
+      // Wait a bit then refresh summary and reset view
+      setTimeout(() => {
+        fetchDailySummary(currentUser.username);
+        handleReset();
+      }, 2000);
     } catch (error: any) {
       setSaveError("No se pudo guardar en tu registro.");
     } finally {

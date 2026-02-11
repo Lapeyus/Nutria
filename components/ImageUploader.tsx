@@ -9,6 +9,7 @@ interface ImageUploaderProps {
 
 const ImageUploader: React.FC<ImageUploaderProps> = ({ imageFile, onImageChange, imageUrl }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -29,8 +30,18 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ imageFile, onImageChange,
         ref={fileInputRef}
         onChange={handleFileChange}
         className="hidden"
-        accept="image/png, image/jpeg, image/webp"
+        accept="image/*"
         aria-label="Upload meal image"
+      />
+      <input
+        type="file"
+        id="camera-capture"
+        ref={cameraInputRef}
+        onChange={handleFileChange}
+        className="hidden"
+        accept="image/*"
+        capture="environment"
+        aria-label="Take meal photo"
       />
       {imageUrl ? (
         <div className="mt-4 group relative">
@@ -46,17 +57,26 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ imageFile, onImageChange,
           </div>
         </div>
       ) : (
-        <div
-          onClick={handleUploadClick}
-          className="mt-4 flex justify-center items-center w-full h-64 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg cursor-pointer hover:border-brand dark:hover:border-brand-light transition-colors"
-        >
-          <div className="text-center">
-            <CameraIcon className="mx-auto h-12 w-12 text-slate-400" />
-            <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-              <span className="font-semibold text-brand">Haz clic para subir</span> o arrastra y suelta
-            </p>
-            <p className="text-xs text-slate-500 dark:text-slate-500">PNG, JPG, WEBP hasta 10MB</p>
+        <div className="mt-4 flex flex-col gap-3">
+          <div
+            onClick={handleUploadClick}
+            className="flex justify-center items-center w-full h-48 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg cursor-pointer hover:border-brand dark:hover:border-brand-light transition-colors"
+          >
+            <div className="text-center">
+              <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+                <span className="font-semibold text-brand">Subir archivo</span> o arrastrar
+              </p>
+              <p className="text-xs text-slate-500 dark:text-slate-500">PNG, JPG, WEBP</p>
+            </div>
           </div>
+
+          <button
+            onClick={() => cameraInputRef.current?.click()}
+            className="w-full py-3 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl font-bold hover:bg-slate-200 dark:hover:bg-slate-600 transition-all flex items-center justify-center text-sm sm:text-base touch-manipulation active:scale-95 min-h-[44px]"
+          >
+            <CameraIcon className="w-5 h-5 mr-2" />
+            Tomar Foto
+          </button>
         </div>
       )}
     </div>
