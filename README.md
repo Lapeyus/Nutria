@@ -1,143 +1,191 @@
 <div align="center">
 <img width="1200" height="475" alt="Nutria Logo Banner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
 
-# 🦦 Nutria - Nutrición IA
-### *Asistente Inteligente de Alimentación*
+# Nutria — Nutrición Inteligente
+
+**Snap a photo of your meal and get a Costa Rica–aware nutritional breakdown from Google Gemini, logged to Google Sheets.**
 
 [![Vite](https://img.shields.io/badge/vite-%23646CFF.svg?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev/)
-[![React](https://img.shields.io/badge/react-%2320232a.svg?style=for-the-badge&logo=react&logoColor=%2361DAFB)](https://reactjs.org/)
+[![React](https://img.shields.io/badge/react-%2320232a.svg?style=for-the-badge&logo=react&logoColor=%2361DAFB)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/typescript-%23007ACC.svg?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![TailwindCSS](https://img.shields.io/badge/tailwindcss-%2338B2AC.svg?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
 [![Gemini](https://img.shields.io/badge/Google%20Gemini-8E75B2?style=for-the-badge&logo=googlegemini&logoColor=white)](https://ai.google.dev/)
 
 </div>
 
----
+## Overview
 
-## 🌟 Overview
+**Nutria** (*Nutrición* + *IA*) is a single-page web app for food logging. The user takes or uploads a photo of a meal,
+optionally adds a short description, and Gemini returns the dish name, portion size, estimated calories, main
+ingredients and a breakdown into **food-group exchanges** (*harinas, vegetales, proteínas, frutas, leches, grasas*),
+each with a short explanation. The prompt tells the model the user is in Costa Rica so local dishes (*gallo pinto*,
+*casado*, …) are recognized by name.
 
-**Nutria** (de la combinación *Nutrición* + *IA*) es una aplicación web inteligente diseñada para simplificar el seguimiento nutricional. Aprovechando el poder de **Google Gemini 1.5 Flash**, permite a los usuarios simplemente tomar una foto de su plato y recibir un desglose completo en segundos.
+Meals are saved to a Google Sheet through a Google Apps Script web app, one tab per user, and a daily dashboard compares
+what was eaten today against the targets in the user's nutrition profile. The UI is in Spanish.
 
-Tailored specifically with a **Costa Rican culinary context**, Nutria recognizes local dishes—like *Gallo Pinto* or *Casados*—providing accurate portion estimates and food group breakdowns based on regional diet patterns.
+It is aimed at people following a food-exchange meal plan (as typically prescribed by a nutritionist) who want a quick
+way to log meals from their phone.
 
-## ✨ Key Features
+## Features
 
-- 📸 **Visual Recognition**: Upload or take a photo of your meal for instant identification.
-- 🥘 **Local Context**: Specialized recognition for Costa Rican cuisine and terminology.
-- 📊 **Nutritional Breakdown**:
-    - **Estimated Calories**: Total calorie count per portion.
-    - **Portion Estimation**: Approximate weight or volume (e.g., "1 cup", "200g").
-    - **Food Group Mapping**: Automatic breakdown into *Harinas (Carbs)*, *Vegetales*, *Proteínas*, *Frutas*, and *Grasas*.
-    - **Ingredient List**: Detection of primary ingredients.
-- 🕒 **Smart Timestamps**: Automatically extracts the time the meal was taken from EXIF metadata.
-- 👤 **User Management**: Personal accounts with username/password support.
-- 📂 **Multi-User Google Sheets**: Each user gets their own dedicated sheet (tab) in the master Google Sheet for organized tracking.
-- 🌗 **Responsive Design**: Modern, glassmorphic UI with full Dark Mode support.
+- **Photo analysis** with `gemini-2.5-flash` and a JSON response schema (`services/geminiService.ts`).
+- **Camera capture** on mobile (`capture="environment"`) or file upload.
+- **Meal description** field to give the model extra context.
+- **Re-estimation**: adjust the result and ask Gemini to recalculate (`reestimateFoodAnalysis`).
+- **Photo timestamp**: the model is asked to return the EXIF `DateTimeOriginal` when present.
+- **Accounts** (sign up / log in) stored in a hidden `_UsersAuth_` sheet; session kept in `localStorage`.
+- **Nutrition profile** ("Mi Ficha"): daily exchange targets per food group, calories, water, weight and goal weight,
+  exercise plan and notes.
+- **Daily compliance dashboard**: today's totals per food group vs. profile targets (`get_summary`).
+- **Per-user log tab** in the Google Sheet with date, dish, portion, calories, ingredients, exchanges and a resized
+  image.
+- Responsive layout with dark-mode styles; mobile-specific tweaks are listed in `MOBILE_OPTIMIZATIONS.md` (Spanish).
 
-## 🛠️ Technology Stack
+## Architecture
 
-- **Frontend**: React 19 + TypeScript
-- **Build Tool**: Vite
-- **Styling**: Tailwind CSS (PostCSS version)
-- **AI Engine**: Google Generative AI (Gemini 2.5 Flash)
-- **Persistence**: Google Apps Script (Web App) + Google Sheets
-- **Deployment**: GitHub Pages via GitHub Actions
+```mermaid
+flowchart LR
+    subgraph Browser["Browser (React 19 + Vite SPA)"]
+        UI["App.tsx + components/"]
+        GS["services/geminiService.ts"]
+        LS[("localStorage<br/>nutria_user")]
+    end
 
----
+    UI --> GS
+    GS -- "image + prompt<br/>(API key in bundle)" --> Gemini["Google Gemini API<br/>gemini-2.5-flash"]
+    UI -- "POST JSON<br/>signup / login / update_profile<br/>save_meal / get_summary" --> GAS["Google Apps Script web app<br/>GoogleAppsScript.gs"]
+    GAS --> Sheet[("Google Sheet<br/>_UsersAuth_ + one tab per user")]
+    UI <--> LS
 
-## 🚀 Getting Started
-
-### Prerequisites
-
-- [Node.js](https://nodejs.org/) (Latest LTS version recommended)
-- A [Google AI Studio API Key](https://aistudio.google.com/app/apikey)
-
-### Installation
-
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/Lapeyus/Nutria.git
-   cd Nutria
-   ```
-
-2. **Install dependencies:**
-   ```bash
-   npm install
-   ```
-
-3. **Configure Environment:**
-   Create a `.env.local` file in the root directory and add your Gemini API Key:
-   ```env
-   VITE_GEMINI_API_KEY=your_actual_api_key_here
-   ```
-
-4. **Run development server:**
-   ```bash
-   npm run dev
-   ```
-
----
-
-## 📊 Google Sheets (Multi-User) Setup
-
-To enable saving to Google Sheets with dedicated user tabs:
-
-1. Create a new **Google Sheet**.
-2. Go to **Extensions** > **Apps Script**.
-3. Copy the content of the `GoogleAppsScript.gs` file from this project and paste it into the script editor.
-4. Click **Deploy** > **New Deployment**.
-5. Select **Web App**.
-   - Execute as: **Me**
-   - Who has access: **Anyone**
-6. Copy the **Web App URL**.
-7. In `App.tsx`, update the `GOOGLE_SHEET_URL` constant with your new URL.
-
----
-
-## 💰 Análisis de Costos
-
-Nutria está optimizada para ser extremadamente económica gracias al uso de los modelos **Flash** de Google. A continuación, un desglose estimado de los costos operativos por usuario:
-
-### Estimación por Ejecución (1 Imagen)
-| Concepto | Cantidad Est. | Costo (USD) |
-| :--- | :--- | :--- |
-| **Tokens de Entrada** (Prompt + Imagen) | ~600 tokens | $0.000045 |
-| **Tokens de Salida** (JSON estructurado) | ~400 tokens | $0.000120 |
-| **Total por imagen** | **1,000 tokens** | **$0.000165** |
-
-### Proyección por Usuario (6 ejecuciones diarias)
-*   **Costo diario:** ~$0.001 USD (una décima parte de un centavo).
-*   **Costo mensual (30 días):** **~$0.03 USD** (aprox. 18 colones costarricenses).
-
-*Nota: Estos cálculos se basan en la tarifa de Cloud Pay-as-you-go. El nivel gratuito (Free Tier) de Google AI Studio permite hasta 1,500 ejecuciones diarias sin costo, lo que hace que la app sea prácticamente gratuita para uso personal y pequeños grupos.*
-
----
-
-## 🌐 Deployment
-
-### GitHub Pages
-
-This project is pre-configured for automated deployment via GitHub Actions.
-
-1. **Enable GitHub Pages**: Settings → Pages → Build and deployment → Source: **GitHub Actions**.
-2. **Add Secret**: Settings → Secrets and variables → Actions → **New repository secret**.
-   - Name: `VITE_GEMINI_API_KEY`
-   - Value: Your Gemini API Key.
-3. **Push to Main**: Any push to the `main` branch will automatically trigger a new deployment.
-
-### Manual Build
-
-To generate the production bundle locally:
-```bash
-npm run build
+    Push["push to main"] --> GHA["GitHub Actions<br/>deploy.yml"] --> Pages["GitHub Pages<br/>(dist/)"]
 ```
-The output will be available in the `dist/` directory.
 
----
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant A as Nutria (browser)
+    participant G as Gemini API
+    participant S as Apps Script + Sheet
+    U->>A: photo (+ optional description)
+    A->>G: generateContent(image, prompt, responseSchema)
+    G-->>A: FoodAnalysis JSON
+    U->>A: optional adjustments
+    A->>G: reestimate
+    G-->>A: updated FoodAnalysis
+    U->>A: save
+    A->>S: save_meal (no-cors POST)
+    A->>S: get_summary
+    S-->>A: today's totals
+    A-->>U: compliance dashboard
+```
 
-## 📝 License
+## Requirements
 
-This project is for educational and personal use. Built with ❤️ for better nutrition.
+- Node.js 20 (the version used in CI) and npm.
+- A Gemini API key from [Google AI Studio](https://aistudio.google.com/app/apikey).
+- A Google account to host the Sheet and the Apps Script web app (only needed for login and saving).
 
----
-*View in AI Studio:* [Nutria App](https://ai.studio/apps/drive/1nxyCHyFf0bXtWMiKK8OaZ9M4ZwbrpFoU)
+## Installation and quick start
+
+```bash
+git clone https://github.com/Lapeyus/Nutria.git
+cd Nutria
+npm install
+echo "VITE_GEMINI_API_KEY=<your-key>" > .env.local
+npm run dev
+# Vite dev server on http://localhost:3000 (bound to 0.0.0.0, so reachable from a phone on the same network)
+```
+
+### Google Sheets backend
+
+1. Create a Google Sheet and open **Extensions → Apps Script**.
+2. Paste the contents of `GoogleAppsScript.gs` and save.
+3. **Deploy → New deployment → Web app**, execute as *Me*, access *Anyone*.
+4. Put the resulting web app URL in the `GOOGLE_SHEET_URL` constant in `App.tsx`.
+
+Every change to `GoogleAppsScript.gs` requires a **new deployment** to take effect. Step-by-step instructions (Spanish)
+are in `DEPLOYMENT_INSTRUCTIONS.md`.
+
+## Usage
+
+1. Create an account or log in.
+2. Fill in **Mi Ficha** with your daily targets.
+3. Take or upload a meal photo, optionally describe it, and review the analysis.
+4. Adjust and re-estimate if needed, then save.
+5. Check the daily dashboard to see remaining exchanges per food group.
+
+Scripts from `package.json`:
+
+| Command | What it does |
+| --- | --- |
+| `npm run dev` | Vite dev server |
+| `npm run build` | Production build into `dist/` |
+| `npm run preview` | Serve the built `dist/` locally |
+| `npm run deploy` | Build and add `dist/.nojekyll` |
+
+## Repository structure
+
+```text
+Nutria/
+├── App.tsx                      # App shell: auth state, analysis flow, save + daily summary; GOOGLE_SHEET_URL
+├── index.tsx / index.html       # Entry point and HTML (PWA/mobile meta tags)
+├── types.ts                     # UserProfile, User, FoodAnalysis, FoodSummary, ...
+├── services/geminiService.ts    # Gemini client, prompts, response schema, analyze + re-estimate
+├── components/
+│   ├── ImageUploader.tsx        # Upload / camera capture
+│   ├── AnalysisResult.tsx       # Result view, adjustments, save
+│   ├── ComplianceDashboard.tsx  # Today's totals vs. targets
+│   ├── ProfileView.tsx          # "Mi Ficha" nutrition profile
+│   ├── Login.tsx                # Sign up / log in
+│   ├── Header.tsx, Footer.tsx, icons/
+├── GoogleAppsScript.gs          # Backend: doPost actions over the Google Sheet
+├── public/                      # logo.png, favicon.png
+├── index.css, mobile-optimizations.css, tailwind.config.js, postcss.config.js
+├── vite.config.ts               # Port 3000, maps GEMINI key into process.env for compatibility
+├── .github/workflows/deploy.yml # Build + deploy to GitHub Pages
+├── DEPLOYMENT_INSTRUCTIONS.md   # Apps Script redeploy guide (Spanish)
+├── GITHUB_SECRETS_INSTRUCTIONS.md # How to add the Gemini key as an Actions secret
+└── MOBILE_OPTIMIZATIONS.md      # Notes on mobile UI work (Spanish)
+```
+
+## Configuration
+
+| Name | Where | Purpose |
+| --- | --- | --- |
+| `VITE_GEMINI_API_KEY` | `.env.local` (local) / Actions secret (CI) | Gemini API key, inlined into the bundle at build time |
+| `GEMINI_API_KEY` | optional fallback | Read by `vite.config.ts` if `VITE_GEMINI_API_KEY` is unset |
+| `GOOGLE_SHEET_URL` | constant in `App.tsx` | Apps Script web app endpoint |
+
+`.env.local` and other `*.local` files, `node_modules/` and `dist/` are git-ignored.
+
+## Tests
+
+There are no automated tests and no lint or type-check script in `package.json`.
+
+## Deployment
+
+`.github/workflows/deploy.yml` runs on every push to `main` (or manually): `npm ci`, `npm run build` with
+`VITE_GEMINI_API_KEY` from repository secrets, then uploads `dist/` and deploys to GitHub Pages. Pages must be set to
+the **GitHub Actions** source, and the secret must exist or the deployed app will report that the API key is not set
+(see `GITHUB_SECRETS_INSTRUCTIONS.md`). `vite.config.ts` uses `base: '/'`, which fits a custom domain or a user site.
+
+## Cost
+
+Analysis uses Gemini Flash, which is inexpensive per image, and Google AI Studio's free tier covers light personal use.
+Check current [Gemini API pricing](https://ai.google.dev/pricing) before running it for more users.
+
+## Project status
+
+Active personal project / prototype. Started December 2025; last commit February 2026.
+
+## Known limitations
+
+- **The Gemini API key is shipped to the browser.** Anyone using the deployed site can extract it; restrict the key
+  (HTTP referrer, quotas) or move the call behind a backend before wider use.
+- **Passwords are stored and compared in plain text** in the `_UsersAuth_` sheet, and the Apps Script endpoint is open to
+  anyone with the URL. Treat the login as a convenience, not as security.
+- Meals are saved with a `no-cors` request, so the app cannot detect save failures.
+- The daily summary compares dates with the Apps Script server's locale and time zone.
+- Food-group and calorie values are model estimates, not measurements.
+- No LICENSE file; the previous README described the project as for educational and personal use.
